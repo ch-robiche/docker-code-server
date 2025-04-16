@@ -36,11 +36,7 @@ RUN \
   echo "**** install Node.js and npm ****" && \
   NODE_VERSION=22.14.0 && \
   curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz \
-    | tar -xzfv - \
-      --exclude CHANGELOG.md \
-      --exclude LICENSE \
-      --exclude README.md \
-      --strip-components=1 -C /usr/local/ && \
+    | tar -xz -C /usr/local/ --strip-components=1 && \
   node -v && npm -v && \
   echo "**** install @anthropic-ai/claude-code globally ****" && \
   npm install -g @anthropic-ai/claude-code && \
