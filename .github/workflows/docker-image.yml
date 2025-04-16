@@ -25,7 +25,7 @@ jobs:
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
-          password: ${{ secrets.BROWSER_TOKEN }}
+          password: ${{ secrets.ACTION_SECRET }}
 
       - name: Extract metadata
         id: meta
