@@ -9,7 +9,7 @@ ARG CODE_RELEASE
 LABEL build_version="Linuxserver.io version:- ${VERSION} Build-date:- ${BUILD_DATE}"
 LABEL maintainer="aptalca"
 
-# environment settings
+# environment settings
 ARG DEBIAN_FRONTEND="noninteractive"
 ENV HOME="/config"
 
@@ -33,6 +33,13 @@ RUN \
     "https://github.com/coder/code-server/releases/download/v${CODE_RELEASE}/code-server-${CODE_RELEASE}-linux-amd64.tar.gz" && \
   tar xf /tmp/code-server.tar.gz -C \
     /app/code-server --strip-components=1 && \
+  echo "**** install Node.js and npm ****" && \
+  NODE_VERSION=22.14.0 && \
+  curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-x64.tar.gz \
+    | tar -xz -C /usr/local/ --strip-components=1 && \
+  node -v && npm -v && \
+  echo "**** install @anthropic-ai/claude-code globally ****" && \
+  npm install -g @anthropic-ai/claude-code && \
   printf "Linuxserver.io version: ${VERSION}\nBuild-date: ${BUILD_DATE}" > /build_version && \
   echo "**** clean up ****" && \
   apt-get clean && \
