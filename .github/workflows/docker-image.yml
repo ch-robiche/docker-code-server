@@ -39,7 +39,8 @@ jobs:
         with:
           context: .
           file: ./Dockerfile.custom
-          platforms: linux/amd64,linux/arm64  # Add this line
+          platforms: linux/amd64,linux/arm64
           push: true
+          no-cache: true  # Add this to force clean build
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
