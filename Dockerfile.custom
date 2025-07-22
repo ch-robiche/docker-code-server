@@ -45,6 +45,9 @@ RUN \
   curl -fsSL https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.gz \
     | tar -xz -C /usr/local/ --strip-components=1 && \
   node -v && npm -v && \
+  echo "**** upgrade npm to latest version ****" && \
+  npm install -g npm@latest && \
+  npm -v && \
   echo "**** install @anthropic-ai/claude-code globally ****" && \
   npm install -g @anthropic-ai/claude-code && \
   printf "Linuxserver.io version: ${VERSION}\nBuild-date: ${BUILD_DATE}" > /build_version && \
