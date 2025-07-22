@@ -1,0 +1,49 @@
+name: Monitor Claude Code NPM Release
+
+on:
+  schedule:
+    # Check once daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check latest NPM version and publish date
+        id: npm-version
+        run: |
+          PACKAGE_INFO=$(npm view @anthropic-ai/claude-code --json)
+          LATEST_VERSION=$(echo "$PACKAGE_INFO" | jq -r '.version')
+          PUBLISH_DATE=$(echo "$PACKAGE_INFO" | jq -r '.time."'"$LATEST_VERSION"'"')
+          
+          # Calculate if release was published in the last 24 hours
+          PUBLISH_TIMESTAMP=$(date -d "$PUBLISH_DATE" +%s)
+          CURRENT_TIMESTAMP=$(date +%s)
+          HOURS_DIFF=$(( (CURRENT_TIMESTAMP - PUBLISH_TIMESTAMP) / 3600 ))
+          
+          echo "latest_version=$LATEST_VERSION" >> $GITHUB_OUTPUT
+          echo "publish_date=$PUBLISH_DATE" >> $GITHUB_OUTPUT
+          echo "hours_since_publish=$HOURS_DIFF" >> $GITHUB_OUTPUT
+          echo "is_recent_release=$([[ $HOURS_DIFF -le 24 ]] && echo 'true' || echo 'false')" >> $GITHUB_OUTPUT
+          
+          echo "Latest version: $LATEST_VERSION"
+          echo "Published: $PUBLISH_DATE"
+          echo "Hours since publish: $HOURS_DIFF"
+
+      - name: Trigger docker image build
+        if: steps.npm-version.outputs.is_recent_release == 'true'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            console.log('Recent release detected: ${{ steps.npm-version.outputs.latest_version }}');
+            console.log('Published: ${{ steps.npm-version.outputs.publish_date }}');
+            console.log('Hours since publish: ${{ steps.npm-version.outputs.hours_since_publish }}');
+            
+            await github.rest.actions.createWorkflowDispatch({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              workflow_id: 'docker-image.yml',
+              ref: 'master'
+            });
+            console.log('Docker image workflow triggered for Claude Code version: ${{ steps.npm-version.outputs.latest_version }}');
