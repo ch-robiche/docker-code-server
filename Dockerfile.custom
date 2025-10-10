@@ -1,4 +1,4 @@
-## custom Dockerfile for code-server that includes claude-code + gcloud + Vertex env
+## custom Dockerfile for code-server that includes claude-code + gcloud + gh + AI CLIs
 # syntax=docker/dockerfile:1
 
 FROM ghcr.io/linuxserver/baseimage-ubuntu:noble
@@ -22,6 +22,10 @@ ENV CLAUDE_CODE_USE_VERTEX=1 \
     NPM_CONFIG_FUND=false \
     NPM_CONFIG_AUDIT=false
 
+# Configure npm for user-writable global installs and add to PATH
+ENV NPM_CONFIG_PREFIX=/config/.npm-global \
+    PATH=/config/.npm-global/bin:${PATH}
+
 RUN \
   echo "**** install runtime dependencies ****" && \
   apt-get update && \
@@ -33,16 +37,29 @@ RUN \
     libatomic1 \
     nano \
     net-tools \
+    python3 \
+    python3-pip \
     sudo && \
+  echo "**** install GitHub CLI (apt repo w/ keyring) ****" && \
+  mkdir -p /usr/share/keyrings && \
+  curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg \
+    | gpg --dearmor -o /usr/share/keyrings/githubcli-archive-keyring.gpg && \
+  echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+    > /etc/apt/sources.list.d/github-cli.list && \
   echo "**** install Google Cloud CLI (apt repo w/ keyring) ****" && \
   rm -f /etc/apt/sources.list.d/google-cloud-sdk.list && \
-  mkdir -p /usr/share/keyrings && \
   curl -fsSL https://packages.cloud.google.com/apt/doc/apt-key.gpg \
     | gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
   echo 'deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main' \
     > /etc/apt/sources.list.d/google-cloud-sdk.list && \
   apt-get update && \
-  apt-get install -y google-cloud-cli && \
+  apt-get install -y \
+    gh \
+    google-cloud-cli && \
+  echo "**** install AI CLI tools via pip ****" && \
+  pip3 install --no-cache-dir --break-system-packages \
+    openai \
+    google-generativeai && \
   echo "**** install code-server ****" && \
   if [ -z ${CODE_RELEASE+x} ]; then \
     CODE_RELEASE=$(curl -sX GET https://api.github.com/repos/coder/code-server/releases/latest \
@@ -55,17 +72,17 @@ RUN \
   curl -o /tmp/code-server.tar.gz -L \
     "https://github.com/coder/code-server/releases/download/v${CODE_RELEASE}/code-server-${CODE_RELEASE}-linux-${CODE_ARCH}.tar.gz" && \
   tar xf /tmp/code-server.tar.gz -C /app/code-server --strip-components=1 && \
-  echo "**** install Node.js and npm ****" && \
-  NODE_VERSION=22.14.0 && \
+  echo "**** install Node.js and npm (latest) ****" && \
+  NODE_VERSION=$(curl -sL https://nodejs.org/dist/latest/SHASUMS256.txt | head -1 | sed 's/.*node-v\([0-9.]*\)-.*/\1/') && \
   ARCH=$(uname -m) && \
   if [ "$ARCH" = "aarch64" ]; then NODE_ARCH="arm64"; fi && \
   if [ "$ARCH" = "x86_64" ]; then NODE_ARCH="x64"; fi && \
   curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.gz" \
     | tar -xz -C /usr/local/ --strip-components=1 && \
   node -v && npm -v && \
-  echo "**** upgrade npm and install claude-code globally ****" && \
+  echo "**** upgrade npm to latest ****" && \
   npm install -g npm@latest && \
-  npm install -g @anthropic-ai/claude-code && \
+  echo "**** claude-code will be installed at first startup in init script ****" && \
   printf "Linuxserver.io version: ${VERSION}\nBuild-date: ${BUILD_DATE}" > /build_version && \
   echo "**** clean up ****" && \
   apt-get clean && \

@@ -1,0 +1,29 @@
+#!/usr/bin/with-contenv bash
+# shellcheck shell=bash
+
+# Install/update claude-code in user-writable location for auto-updates
+if [[ -z ${LSIO_NON_ROOT_USER} ]]; then
+    echo "Setting up Claude Code for user abc with auto-update support"
+
+    # Create npm global directory if it doesn't exist
+    mkdir -p /config/.npm-global
+
+    # Install/update claude-code as user abc
+    s6-setuidgid abc bash -c '
+        export NPM_CONFIG_PREFIX=/config/.npm-global
+        export PATH=/config/.npm-global/bin:$PATH
+
+        # Check if claude-code is installed
+        if command -v claude &> /dev/null; then
+            echo "Claude Code already installed, checking for updates..."
+            npm update -g @anthropic-ai/claude-code || echo "Update check completed"
+        else
+            echo "Installing Claude Code for the first time..."
+            npm install -g @anthropic-ai/claude-code
+        fi
+
+        echo "Claude Code setup complete"
+    '
+else
+    echo "Skipping Claude Code setup in non-root mode"
+fi

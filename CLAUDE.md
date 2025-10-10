@@ -46,20 +46,30 @@ docker build --no-cache --pull -f Dockerfile.aarch64 -t lscr.io/linuxserver/code
 The `/root` directory contains files copied into the container at build time:
 
 - **root/etc/s6-overlay/s6-rc.d/init-code-server/run** - Initialization script that sets up sudo access, SSH permissions, and directory structure
+- **root/etc/s6-overlay/s6-rc.d/init-claude-code/run** - Initialization script that installs/updates Claude Code in user-writable location for auto-updates
 - **root/etc/s6-overlay/s6-rc.d/svc-code-server/run** - Service script that launches code-server with appropriate flags
 - **root/usr/local/bin/install-extension** - Helper script for installing VS Code extensions (used by Docker mods)
 
 ### Custom Dockerfile Features
 
 The `Dockerfile.custom` variant includes:
-- **Claude Code**: Installed globally via npm during build
-- **Google Cloud CLI**: Installed from official apt repository with GPG keyring
-- **Node.js 22.14.0**: Custom Node.js installation supporting both amd64 and arm64 architectures
-- **Vertex AI Environment Variables**: Pre-configured for Anthropic's Vertex AI integration
-  - `CLAUDE_CODE_USE_VERTEX=1`
-  - `CLOUD_ML_REGION=us-east5`
-  - `ANTHROPIC_VERTEX_PROJECT_ID=oa-data-btdpexploration-np`
-  - `DISABLE_PROMPT_CACHING=0`
+
+**Development Tools:**
+- **Claude Code**: Installed at first startup via init script to `/config/.npm-global` for auto-update support (latest from npm registry)
+- **GitHub CLI** (`gh`): Latest version from official GitHub CLI apt repository
+- **Google Cloud CLI** (`gcloud`): Latest version from official Google Cloud apt repository
+- **Node.js**: Latest stable version auto-detected from nodejs.org, supporting both amd64 and arm64 architectures
+
+**AI API Tools:**
+- **OpenAI CLI**: Latest Python package for accessing OpenAI APIs including Codex (`openai`)
+- **Google Generative AI**: Latest Python SDK for Gemini API (`google-generativeai`)
+
+**Environment Variables:**
+Pre-configured for Anthropic's Vertex AI integration:
+- `CLAUDE_CODE_USE_VERTEX=1`
+- `CLOUD_ML_REGION=us-east5`
+- `ANTHROPIC_VERTEX_PROJECT_ID=oa-data-btdpexploration-np`
+- `DISABLE_PROMPT_CACHING=0`
 
 ## Making Changes
 
@@ -99,7 +109,13 @@ The container uses **s6-overlay** for process supervision. The initialization fl
    - Manages ownership/permissions (skips `/config/workspace` contents for performance)
    - Sets SSH directory permissions (700 for directories, 600 for private keys, 644 for public keys)
 
-2. **svc-code-server** starts the service:
+2. **init-claude-code** runs after config initialization:
+   - Creates `/config/.npm-global` directory for user-writable npm packages
+   - Installs Claude Code as user `abc` (first startup only)
+   - Checks for and applies updates on subsequent startups
+   - Enables Claude Code's built-in auto-update feature
+
+3. **svc-code-server** starts the service:
    - Configures authentication (password, hashed password, or none)
    - Sets up proxy domain if specified
    - Launches code-server bound to `0.0.0.0:8443` (or `[::]:8443` for non-root)
