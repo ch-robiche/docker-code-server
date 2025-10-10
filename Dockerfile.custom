@@ -18,11 +18,7 @@ ENV HOME="/config"
 ENV CLAUDE_CODE_USE_VERTEX=1 \
     CLOUD_ML_REGION=us-east5 \
     ANTHROPIC_VERTEX_PROJECT_ID=oa-data-btdpexploration-np \
-    DISABLE_PROMPT_CACHING=0
-
-# Make npm global installs user-writable and on PATH (for auto-updates)
-ENV NPM_CONFIG_PREFIX=/config/.npm-global \
-    PATH=/config/.npm-global/bin:/app/code-server/bin:${PATH} \
+    DISABLE_PROMPT_CACHING=0 \
     NPM_CONFIG_FUND=false \
     NPM_CONFIG_AUDIT=false
 
@@ -67,12 +63,9 @@ RUN \
   curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.gz" \
     | tar -xz -C /usr/local/ --strip-components=1 && \
   node -v && npm -v && \
-  echo "**** prepare npm user-global prefix ****" && \
-  mkdir -p /config/.npm-global && \
-  chown -R abc:abc /config && \
-  echo "**** upgrade npm (system) then install claude-code as user for auto-updates ****" && \
+  echo "**** upgrade npm and install claude-code globally ****" && \
   npm install -g npm@latest && \
-  su abc -s /bin/bash -c "npm config set prefix '/config/.npm-global' && npm -v && npm install -g @anthropic-ai/claude-code" && \
+  npm install -g @anthropic-ai/claude-code && \
   printf "Linuxserver.io version: ${VERSION}\nBuild-date: ${BUILD_DATE}" > /build_version && \
   echo "**** clean up ****" && \
   apt-get clean && \
