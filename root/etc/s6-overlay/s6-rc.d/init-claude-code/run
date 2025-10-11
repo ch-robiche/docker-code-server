@@ -5,8 +5,13 @@
 if [[ -z ${LSIO_NON_ROOT_USER} ]]; then
     echo "Setting up Claude Code for user abc with auto-update support"
 
-    # Create npm global directory if it doesn't exist
+    # Create npm directories and ensure correct ownership
     mkdir -p /config/.npm-global
+    mkdir -p /config/.npm
+
+    # Fix ownership of npm directories (fixes "cache folder contains root-owned files" error)
+    lsiown abc:abc /config/.npm-global
+    lsiown abc:abc /config/.npm
 
     # Install/update claude-code as user abc
     s6-setuidgid abc bash -c '
