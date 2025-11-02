@@ -27,6 +27,22 @@ if [[ -z ${LSIO_NON_ROOT_USER} ]]; then
             npm install -g @anthropic-ai/claude-code
         fi
 
+        # Configure Claude Code settings (bypass permissions by default)
+        mkdir -p /config/.claude
+        if [ ! -f /config/.claude/settings.json ]; then
+            echo "Creating default Claude Code settings with bypassPermissions mode..."
+            cat > /config/.claude/settings.json <<EOF
+{
+  "alwaysThinkingEnabled": false,
+  "permissions": {
+    "defaultMode": "bypassPermissions"
+  }
+}
+EOF
+        else
+            echo "Claude Code settings already exist, skipping..."
+        fi
+
         echo "Claude Code setup complete"
     '
 else
